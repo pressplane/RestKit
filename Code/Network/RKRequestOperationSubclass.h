@@ -41,5 +41,7 @@
  Invoked to tell the receiver that the object request operation is finishing its work and is about to transition into the finished state. Used to perform any necessary cleanup before the operation is finished.
  */
 - (void)willFinish;
+- (void)willMapResponse;
+- (void)willCancel;
 
 @end

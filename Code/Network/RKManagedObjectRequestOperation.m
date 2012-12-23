@@ -463,43 +463,61 @@ static NSURL *RKRelativeURLFromURLAndResponseDescriptors(NSURL *URL, NSArray *re
     return _blockSuccess;;
 }
 
+- (void)willMapResponse
+{
+    [self.managedObjectCache lock];
+}
+
+- (void)willCancel
+{
+    [self.managedObjectCache unlock];
+}
+
+- (void)executeBlockWithManagedObjectCacheLocked:(void (^)())block
+{
+    block();
+    [self.managedObjectCache unlock];
+}
+
 - (void)willFinish
 {
-    BOOL success;
-    NSError *error = nil;
+    [self executeBlockWithManagedObjectCacheLocked:^{
+        BOOL success;
+        NSError *error = nil;
 
-    // Construct a set of key paths to all of the managed objects in the mapping result
-    RKNestedManagedObjectKeyPathMappingGraphVisitor *visitor = [[RKNestedManagedObjectKeyPathMappingGraphVisitor alloc] initWithResponseDescriptors:self.responseDescriptors];
-    NSSet *managedObjectMappingResultKeyPaths = visitor.keyPaths;
+        // Construct a set of key paths to all of the managed objects in the mapping result
+        RKNestedManagedObjectKeyPathMappingGraphVisitor *visitor = [[RKNestedManagedObjectKeyPathMappingGraphVisitor alloc] initWithResponseDescriptors:self.responseDescriptors];
+        NSSet *managedObjectMappingResultKeyPaths = visitor.keyPaths;
 
-    // Handle any cleanup
-    success = [self deleteTargetObjectIfAppropriate:&error];
-    if (! success) {
-        self.error = error;
-        return;
-    }
+        // Handle any cleanup
+        success = [self deleteTargetObjectIfAppropriate:&error];
+        if (! success) {
+            self.error = error;
+            return;
+        }
 
-    success = [self deleteLocalObjectsMissingFromMappingResult:self.mappingResult atKeyPaths:managedObjectMappingResultKeyPaths error:&error];
-    if (! success) {
-        self.error = error;
-        return;
-    }
+        success = [self deleteLocalObjectsMissingFromMappingResult:self.mappingResult atKeyPaths:managedObjectMappingResultKeyPaths error:&error];
+        if (! success) {
+            self.error = error;
+            return;
+        }
 
-    // Persist our mapped objects
-    success = [self obtainPermanentObjectIDsForInsertedObjects:&error];
-    if (! success) {
-        self.error = error;
-        return;
-    }
-    success = [self saveContext:&error];
-    if (! success) self.error = error;
-    
-    // Refetch all managed objects nested at key paths within the results dictionary before returning
-    if (self.mappingResult) {
-        NSSet *nonNestedKeyPaths = RKSetByRemovingSubkeypathsFromSet(managedObjectMappingResultKeyPaths);
-        NSDictionary *resultsDictionaryFromOriginalContext = RKDictionaryFromDictionaryWithManagedObjectsAtKeyPathsRefetchedInContext([self.mappingResult dictionary], nonNestedKeyPaths, self.managedObjectContext);
-        self.mappingResult = [[RKMappingResult alloc] initWithDictionary:resultsDictionaryFromOriginalContext];
-    }
+        // Persist our mapped objects
+        success = [self obtainPermanentObjectIDsForInsertedObjects:&error];
+        if (! success) {
+            self.error = error;
+            return;
+        }
+        success = [self saveContext:&error];
+        if (! success) self.error = error;
+        
+        // Refetch all managed objects nested at key paths within the results dictionary before returning
+        if (self.mappingResult) {
+            NSSet *nonNestedKeyPaths = RKSetByRemovingSubkeypathsFromSet(managedObjectMappingResultKeyPaths);
+            NSDictionary *resultsDictionaryFromOriginalContext = RKDictionaryFromDictionaryWithManagedObjectsAtKeyPathsRefetchedInContext([self.mappingResult dictionary], nonNestedKeyPaths, self.managedObjectContext);
+            self.mappingResult = [[RKMappingResult alloc] initWithDictionary:resultsDictionaryFromOriginalContext];
+        }
+    }];
 }
 
 @end

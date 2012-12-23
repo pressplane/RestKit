@@ -254,6 +254,16 @@ static NSString *RKStringDescribingURLResponseWithData(NSURLResponse *response, 
     // Default implementation does nothing
 }
 
+- (void)willMapResponse
+{
+    // Default implementation does nothing
+}
+
+- (void)willCancel
+{
+    // Default implementation does nothing
+}
+
 - (void)cancel
 {
     [super cancel];
@@ -274,6 +284,8 @@ static NSString *RKStringDescribingURLResponseWithData(NSURLResponse *response, 
     }
     
     if (self.isCancelled) return;
+    
+    [self willMapResponse];
     
     // Map the response
     NSError *error = nil;

@@ -23,7 +23,7 @@
 /**
  Objects implementing the `RKManagedObjectCaching` provide support for retrieving managed object matching a set of attributes using an opaque caching strategy. The objects retrieved are not required to be in any particular order, but must exactly match the attribute values requested.
  */
-@protocol RKManagedObjectCaching <NSObject>
+@protocol RKManagedObjectCaching <NSObject, NSLocking>
 
 @required
 

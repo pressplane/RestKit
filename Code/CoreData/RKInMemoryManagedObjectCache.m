@@ -29,6 +29,7 @@
 
 @interface RKInMemoryManagedObjectCache ()
 @property (nonatomic, strong, readwrite) RKEntityCache *entityCache;
+@property (nonatomic, strong) NSRecursiveLock *recursiveLock;
 @end
 
 @implementation RKInMemoryManagedObjectCache
@@ -38,6 +39,7 @@
     self = [super init];
     if (self) {
         self.entityCache = [[RKEntityCache alloc] initWithManagedObjectContext:managedObjectContext];
+        self.recursiveLock = [NSRecursiveLock new];
     }
 
     return self;
@@ -83,6 +85,16 @@
 - (void)didDeleteObject:(NSManagedObject *)object
 {
     [self.entityCache removeObject:object];
+}
+
+- (void)lock
+{
+    [self.recursiveLock lock];
+}
+
+- (void)unlock
+{
+    [self.recursiveLock unlock];
 }
 
 @end

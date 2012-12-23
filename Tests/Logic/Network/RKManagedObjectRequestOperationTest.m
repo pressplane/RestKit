@@ -549,6 +549,11 @@ NSSet *RKSetByRemovingSubkeypathsFromSet(NSSet *setOfKeyPaths);
     [mapping addAttributeMappingsFromArray:@[ @"name" ]];
     [mapping addAttributeMappingsFromDictionary:@{ @"id": @"railsID" }];
     
+    NSFetchRequest *fetchRequest = [NSFetchRequest fetchRequestWithEntityName:@"Human"];
+    fetchRequest.predicate = [NSPredicate predicateWithFormat:@"railsID == 1"];
+    NSArray *fetchedObjects = [managedObjectStore.persistentStoreManagedObjectContext executeFetchRequest:fetchRequest error:nil];
+    expect(fetchedObjects).to.haveCountOf(0);
+
     RKResponseDescriptor *responseDescriptor = [RKResponseDescriptor responseDescriptorWithMapping:mapping pathPattern:nil keyPath:@"human" statusCodes:nil];
     
 //    NSURL *URL = [NSURL URLWithString:@"humans/1" relativeToURL:[RKTestFactory baseURL]];
@@ -566,6 +571,7 @@ NSSet *RKSetByRemovingSubkeypathsFromSet(NSSet *setOfKeyPaths);
     secondOperation.managedObjectContext = managedObjectStore.persistentStoreManagedObjectContext;
     secondOperation.managedObjectCache = inMemoryCache;
     
+    [[RKObjectRequestOperation responseMappingQueue] setMaxConcurrentOperationCount:2];
     NSOperationQueue *operationQueue = [NSOperationQueue new];
     [operationQueue setMaxConcurrentOperationCount:2];
     [operationQueue setSuspended:YES];
@@ -577,9 +583,7 @@ NSSet *RKSetByRemovingSubkeypathsFromSet(NSSet *setOfKeyPaths);
     [operationQueue waitUntilAllOperationsAreFinished];
     
     // Now pull the count back from the parent context
-    NSFetchRequest *fetchRequest = [NSFetchRequest fetchRequestWithEntityName:@"Human"];
-    fetchRequest.predicate = [NSPredicate predicateWithFormat:@"railsID == 1"];
-    NSArray *fetchedObjects = [managedObjectStore.persistentStoreManagedObjectContext executeFetchRequest:fetchRequest error:nil];
+    fetchedObjects = [managedObjectStore.persistentStoreManagedObjectContext executeFetchRequest:fetchRequest error:nil];
     expect(fetchedObjects).to.haveCountOf(1);
 }
 

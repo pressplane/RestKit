@@ -43,6 +43,7 @@ static NSPredicate *RKPredicateWithSubsitutionVariablesForAttributeValues(NSDict
 
 @interface RKFetchRequestManagedObjectCache ()
 @property (nonatomic, strong) NSCache *predicateCache;
+@property (nonatomic, strong) NSRecursiveLock *recursiveLock;
 @end
 
 @implementation RKFetchRequestManagedObjectCache
@@ -52,6 +53,7 @@ static NSPredicate *RKPredicateWithSubsitutionVariablesForAttributeValues(NSDict
     self = [super init];
     if (self) {
         self.predicateCache = [NSCache new];
+        self.recursiveLock = [NSRecursiveLock new];
     }
     return self;
 }
@@ -82,6 +84,16 @@ static NSPredicate *RKPredicateWithSubsitutionVariablesForAttributeValues(NSDict
     RKLogDebug(@"Found objects '%@' using fetchRequest '%@'", objects, fetchRequest);
 
     return [NSSet setWithArray:objects];
+}
+
+- (void)lock
+{
+    [self.recursiveLock lock];
+}
+
+- (void)unlock
+{
+    [self.recursiveLock unlock];
 }
 
 @end
