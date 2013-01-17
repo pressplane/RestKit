@@ -31,6 +31,9 @@
 #import "NSBundle+RKAdditions.h"
 #import "NSManagedObjectContext+RKAdditions.h"
 
+#import <objc/runtime.h>
+static char const * const kThreadLocalDict = "kThreadLocalDict";
+
 // Set Logging Component
 #undef RKLogComponent
 #define RKLogComponent lcl_cRestKitCoreData
@@ -161,9 +164,25 @@ static RKManagedObjectStore *defaultObjectStore = nil;
     return self;
 }
 
+
+// The more natural [[NSThread currentThread] threadDictionary]
+// sometimes returns nil, so this hack tries to work around that.
+- (NSMutableDictionary *)threadDictionary
+{
+    NSMutableDictionary *threadDictionary = objc_getAssociatedObject([NSThread currentThread], kThreadLocalDict);
+    if (threadDictionary == nil)
+    {
+        threadDictionary = [[NSMutableDictionary alloc] init];
+        objc_setAssociatedObject([NSThread currentThread], kThreadLocalDict, threadDictionary, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        [threadDictionary release];
+    }
+    return threadDictionary;
+}
+
 - (void)setThreadLocalObject:(id)value forKey:(id)key
 {
-    NSMutableDictionary *threadDictionary = [[NSThread currentThread] threadDictionary];
+    // NSMutableDictionary *threadDictionary = [[NSThread currentThread] threadDictionary];
+    NSMutableDictionary *threadDictionary = [self threadDictionary];
     NSString *objectStoreKey = [NSString stringWithFormat:@"RKManagedObjectStore_%p", self];
     if (! [threadDictionary valueForKey:objectStoreKey]) {
         [threadDictionary setValue:[NSMutableDictionary dictionary] forKey:objectStoreKey];
@@ -174,7 +193,8 @@ static RKManagedObjectStore *defaultObjectStore = nil;
 
 - (id)threadLocalObjectForKey:(id)key
 {
-    NSMutableDictionary *threadDictionary = [[NSThread currentThread] threadDictionary];
+    // NSMutableDictionary *threadDictionary = [[NSThread currentThread] threadDictionary];
+    NSMutableDictionary *threadDictionary = [self threadDictionary];
     NSString *objectStoreKey = [NSString stringWithFormat:@"RKManagedObjectStore_%p", self];
     if (! [threadDictionary valueForKey:objectStoreKey]) {
         [threadDictionary setObject:[NSMutableDictionary dictionary] forKey:objectStoreKey];
@@ -185,7 +205,8 @@ static RKManagedObjectStore *defaultObjectStore = nil;
 
 - (void)removeThreadLocalObjectForKey:(id)key
 {
-    NSMutableDictionary *threadDictionary = [[NSThread currentThread] threadDictionary];
+    // NSMutableDictionary *threadDictionary = [[NSThread currentThread] threadDictionary];
+    NSMutableDictionary *threadDictionary = [self threadDictionary];
     NSString *objectStoreKey = [NSString stringWithFormat:@"RKManagedObjectStore_%p", self];
     if (! [threadDictionary valueForKey:objectStoreKey]) {
         [threadDictionary setObject:[NSMutableDictionary dictionary] forKey:objectStoreKey];
